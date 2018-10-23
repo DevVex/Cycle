@@ -9,6 +9,15 @@ using System.Net.Sockets;
 using System.Threading;
 using TMPro;
 
+[Serializable]
+public class ClientTransfer{
+    public float speed;
+    public float distance;
+    public float cadence;
+    public string heartRate;
+    public string tilt;
+}
+
 
 public class UDP_GyroReceive : MonoBehaviour {
 	// receiving Thread
@@ -21,7 +30,6 @@ public class UDP_GyroReceive : MonoBehaviour {
 	
 	// infos
 	public string lastReceivedUDPPacket="";
-	public string allReceivedUDPPackets=""; // clean up this from time to time!
 
 	//Variable used to pass UDP data to the main thread
 	private static Vector3 latestCamPosition;
@@ -30,17 +38,24 @@ public class UDP_GyroReceive : MonoBehaviour {
 	private float initialDelay = 0f;
 	private float repeatTime = 0.01f;
 
-    private bool hasUpdatedTouch = false;
-    private bool hasUpdatePlayerNumber = false;
-    private bool hasPressedSpecial = false;
-
     private Vector2 touchCoords = Vector2.zero;
-    private int newPlayerNumber = 1;
 
 
     public Transform moveableObj;
 
     public TextMeshProUGUI ipAddressUi;
+    public TextMeshProUGUI tiltUi;
+    public TextMeshProUGUI speedUi;
+    public TextMeshProUGUI cadenceUi;
+    public TextMeshProUGUI distanceUi;
+    public TextMeshProUGUI heartRateUi;
+
+
+    private string tilt = "";
+    private float speed = 0f;
+    private float cadence = 0f;
+    private float distance = 0f;
+    private string heartRate = "";
 
     // start from shell
     private static void Main()
@@ -61,16 +76,22 @@ public class UDP_GyroReceive : MonoBehaviour {
 	{
 		
 		init();
-
-		//Update required to check data changes on separate UDP thread
-		InvokeRepeating("UpdateObjectPosition", initialDelay, repeatTime);
-
         ipAddressUi.text = LocalIPAddress();
 
     }
-	
-	// init
-	private void init()
+
+    public void Update()
+    {
+        tiltUi.text = tilt;
+        speedUi.text = speed.ToString();
+        cadenceUi.text = cadence.ToString();
+        distanceUi.text = distance.ToString();
+        heartRateUi.text = heartRate;
+
+    }
+
+    // init
+    private void init()
 	{
 
 		receiveThread = new Thread(new ThreadStart(ReceiveData));
@@ -78,155 +99,40 @@ public class UDP_GyroReceive : MonoBehaviour {
 		receiveThread.Start();
 		
 	}
-	
-	// receive thread
-	private void ReceiveData()
-	{
-		client = new UdpClient(port);
-		while (true)
-		{
-			try
-			{
-				IPEndPoint anyIP = new IPEndPoint(IPAddress.Any, 0);
-				byte[] data = client.Receive(ref anyIP);
-				
-				string text = Encoding.UTF8.GetString(data);
+
+    // receive thread
+    private void ReceiveData()
+    {
+        client = new UdpClient(port);
+        while (true)
+        {
+            try
+            {
+                IPEndPoint anyIP = new IPEndPoint(IPAddress.Any, 0);
+                byte[] data = client.Receive(ref anyIP);
+
+                string text = Encoding.UTF8.GetString(data);
 
                 Debug.Log("Text: " + text);
 
-                //Pulling in information that has been sent to current ip and port
-				if (text.Contains("camR:")){ //Change Cam Rotation
-					//Remove data type identifier
-					string newText = text.Replace(@"camR:","");
+                ClientTransfer clientTransfer = JsonUtility.FromJson<ClientTransfer>(text);
 
-					//Parse the camera rotation
-					Vector3 parsedRotation = getVector3(newText);
-
-					latestCamPosition = parsedRotation;
-				}
-                else if (text.Contains("playN:")) //Change Player Number
-                {
-                    //Remove data type identifier
-                    string newText = text.Replace(@"playN:", "");
-
-                    //Parse the camera rotation
-                    newPlayerNumber = int.Parse(newText);
-                }
-                else if (text.Contains("tPos:")) //Touch position
-                {
-                    //Remove data type identifier
-                    string newText = text.Replace(@"tPos:", "");
-
-                    //Parse the camera rotation
-                    Vector3 tempCoords = getVector3(newText);
-
-                    touchCoords = new Vector2(tempCoords.x, tempCoords.y);
-                    hasUpdatedTouch = true;
-                }
-                else if (text.Contains("useS:")) //Use Special Button
-                {
-                    //Remove data type identifier
-                    string newText = text.Replace(@"useS:", "");
-
-                    //Parse the camera rotation
-                    Vector3 parsedRotation = getVector3(newText);
-
-                    latestCamPosition = parsedRotation;
-                }
-
-				lastReceivedUDPPacket=text;
-				
-
-				allReceivedUDPPackets=allReceivedUDPPackets+text;
-				
-			}
-			catch (Exception err)
-			{
-				print(err.ToString());
-			}
-		}
-	}
-
-	public void UpdateObjectPosition(){
-		Vector3 tempCamPosition = latestCamPosition;
-
-		if (tempCamPosition != Vector3.zero)
-			transform.rotation = Quaternion.Euler(tempCamPosition);
+                tilt = clientTransfer.tilt;
+                speed = clientTransfer.speed;
+                cadence = clientTransfer.cadence;
+                distance = clientTransfer.distance;
+                heartRate = clientTransfer.heartRate;
 
 
-        //Check other possible updates happening on second thread
-        if (hasUpdatedTouch){
-            hasUpdatedTouch = false;
+                lastReceivedUDPPacket = text;
 
-            //touchCoords
-
-            DoRaycast();
-
-            //Do the function for setting the raycast from the touch value
-            Debug.Log("hasUpdatedTouch:");
-        }
-        if (hasUpdatePlayerNumber){
-            hasUpdatePlayerNumber = false;
-
-            //newPlayerNumber
-
-            //Allow the player whos player number matches the new number be controlled
-            Debug.Log("hasUpdatePlayerNumber:" + newPlayerNumber);
-        }
-        if (hasPressedSpecial){
-            hasPressedSpecial = false;
-
-            DoSpecialButton();
-
-            //Allow any custom special function to be used here
-            Debug.Log("hasPressedSpecial");
-        }
-
-	}
-
-    void DoRaycast()
-    {
-        Ray newRay = Camera.main.ScreenPointToRay(touchCoords);
-
-        Vector3 tempXY = Camera.main.ScreenToWorldPoint(touchCoords);
-
-        RaycastHit hit;
-        Vector3 fwd = Camera.main.transform.TransformDirection(Vector3.forward);
-
-        Ray ray = Camera.main.ScreenPointToRay(touchCoords);
-        moveableObj.position = ray.direction * 10;
-
-        Debug.DrawRay(ray.origin, ray.direction * 80, Color.yellow,2,false);
-
-        if (Physics.Raycast(ray, out hit, 1000))
-        {
-            print("Hit something:" + hit.transform.gameObject.name);
-
+            }
+            catch (Exception err)
+            {
+                print(err.ToString());
+            }
         }
     }
-
-    void DoSpecialButton()
-    {
-
-    }
-
-	public Vector3 getVector3(string rString){
-		string[] temp = rString.Substring(1,rString.Length-2).Split(',');
-		float x = float.Parse(temp[0]);
-		float y = float.Parse(temp[1]);
-		float z = float.Parse(temp[2]);
-		Vector3 rValue = new Vector3(x,y,z);
-		return rValue;
-	}
-
-	
-	// getLatestUDPPacket
-	// cleans up the rest
-	public string getLatestUDPPacket()
-	{
-		allReceivedUDPPackets="";
-		return lastReceivedUDPPacket;
-	}
 	
 	void OnApplicationQuit(){
         if (receiveThread.IsAlive)
