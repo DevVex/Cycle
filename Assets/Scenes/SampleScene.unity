@@ -598,7 +598,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -34}
+  m_AnchoredPosition: {x: 0, y: -69}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 1, y: 1}
 --- !u!114 &923866471
@@ -891,9 +891,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   port: 7002
   lastReceivedUDPPacket: 
-  allReceivedUDPPackets: 
   moveableObj: {fileID: 0}
   ipAddressUi: {fileID: 787917370}
+  tiltUi: {fileID: 1398395072}
+  speedUi: {fileID: 1742276243}
+  cadenceUi: {fileID: 1546366354}
+  distanceUi: {fileID: 923866471}
+  heartRateUi: {fileID: 499465788}
 --- !u!4 &1324390893
 Transform:
   m_ObjectHideFlags: 0
@@ -1028,7 +1032,7 @@ MonoBehaviour:
   m_firstVisibleCharacter: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 0, z: 0, w: 0}
+  m_margin: {x: 0, y: 0, z: -60.182434, w: 0}
   m_textInfo:
     textComponent: {fileID: 0}
     characterCount: 5
@@ -1096,7 +1100,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -69}
+  m_AnchoredPosition: {x: 0, y: -34}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 1, y: 1}
 --- !u!114 &1546366354
